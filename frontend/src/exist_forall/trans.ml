@@ -1,19 +1,17 @@
 open Batteries
 
-module StringMap = Map.Make(String)
-
 let set_of_list l =
   List.fold_left (fun s e -> Set.add e s) Set.empty l
 
 let map_of_list l =
-  List.fold_left (fun s (k, v) -> StringMap.add k v s) StringMap.empty l
+  List.fold_left (fun s (k, v) -> Map.add k v s) Map.empty l
 
 (* Substitute control variables with their definitions  *)
-let rec subst (e : Ast.exp) (c_env : Ast.exp StringMap.t) : Ast.exp =
+let rec subst (e : Ast.exp) (c_env : (string, Ast.exp)  Map.t) : Ast.exp =
   let open Basic in
   match e with
-  | Var x when StringMap.mem x c_env ->
-    StringMap.find x c_env
+  | Var x when Map.mem x c_env ->
+    Map.find x c_env
   | Var _ -> e
   | Vec _ -> failwith "not supported"
   | Num _ -> e
@@ -83,13 +81,24 @@ let rec simplify (e : Ast.exp) : Ast.exp =
   | Atanh e -> Atanh (simplify e)
   | Integral _ -> failwith "not supported"
 
+let rec wrap_in_universal
+    (vars : string list)
+    (env : (string, float * float) Map.t)
+    (f : Ast.formula) : Ast.formula
+  =
+  match vars with
+  | [] -> f
+  | v :: tl ->
+    let lb, ub = Map.find v env in
+    Basic.ForallT (Basic.Var v, Basic.Num lb, Basic.Num ub, (wrap_in_universal tl env f))
+
 let codegen (program : Ast.program) : Ast.formula =
   let var_defs, rest =
     List.partition
       (function | Ast.VarDecl _ -> true | _ -> false) program in
   let var_defs = List.fold_left
       (fun map (Ast.VarDecl (v, lb, up)) ->
-         StringMap.add v (lb, up) map) StringMap.empty var_defs in
+         Map.add v (lb, up) map) Map.empty var_defs in
   let rank_fun, body =
     List.partition
       (function | Ast.RankFun _ -> true | _ -> false) rest in
@@ -122,7 +131,7 @@ let codegen (program : Ast.program) : Ast.formula =
   in
 
   let template_vars =
-    (StringMap.bindings state_defs) @ (StringMap.bindings control_defs @ [("", v)])
+    (Map.bindings state_defs) @ (Map.bindings control_defs @ [("", v)])
     |> List.map (fun (_, e) -> e)
     |> Basic.collect_vars_in_exps
     |> (fun all_vars ->
@@ -131,7 +140,7 @@ let codegen (program : Ast.program) : Ast.formula =
 
   (* control constraint *)
   let control_formula =
-    StringMap.bindings control_defs
+    Map.bindings control_defs
     |> List.map (fun (dst, src) -> Basic.Eq (Basic.Var dst, src))
     |> Basic.make_and in
 
@@ -140,7 +149,7 @@ let codegen (program : Ast.program) : Ast.formula =
 
   (* derivative formula *)
   let deriv_formula =
-    StringMap.bindings state_defs
+    Map.bindings state_defs
     |> List.map
       (fun (x, e) ->
          let e1 = subst e control_defs in
@@ -152,4 +161,6 @@ let codegen (program : Ast.program) : Ast.formula =
     |> fun e -> Basic.Lt (e, Basic.Num 0.0)
   in
 
-  Basic.make_and [control_formula; rank_formula; deriv_formula]
+  let main_formula = Basic.make_and [control_formula; rank_formula; deriv_formula] in
+  let formula = wrap_in_universal (Set.elements state_vars) var_defs main_formula in
+  formula
