@@ -44,6 +44,7 @@ rule token = parse
     | ')'       { verbose (Lexing.lexeme lexbuf); RP }
     | '['       { verbose (Lexing.lexeme lexbuf); LB }
     | ']'       { verbose (Lexing.lexeme lexbuf); RB }
+    | '@'       { verbose (Lexing.lexeme lexbuf); AT }
 
 
     (* operators *)

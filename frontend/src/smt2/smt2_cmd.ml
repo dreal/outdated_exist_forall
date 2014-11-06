@@ -1,5 +1,4 @@
 open Batteries
-open Type
 
 type logic = | QF_NRA
              | QF_NRA_ODE

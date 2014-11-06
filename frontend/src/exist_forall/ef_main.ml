@@ -9,7 +9,7 @@ let run () =
                       else raise (Arg.Bad (x^": No such file"))) usage
     in
     let lexbuf = Lexing.from_channel (if !src = "" then stdin else open_in !src) in
-    let ast = Parser.main Lexer.token lexbuf in
-    print_endline "finish parsing"
+    let program = Parser.gdecl_list Lexer.token lexbuf in
+    Ast.Print.program IO.stdout program
 
 let _ = Printexc.catch run ()

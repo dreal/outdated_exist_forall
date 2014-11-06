@@ -16,6 +16,7 @@ open Basic
 %token LOG EXP
 %token TRUE FALSE
 %token AND OR
+%token AT
 %token EOF
 
 %token STATE CONTROL
@@ -27,9 +28,9 @@ open Basic
 %left NEG
 %right CARET
 
-%start main
+%start gdecl_list
 
-%type <Ast.program> main
+%type <Ast.program> gdecl_list
 
 %%
 
@@ -104,6 +105,23 @@ stmt_list:
     | stmt stmt_list { $1@$2 }
 ;
 
-main:
-    | stmt_list                      { $1 }
+arg_list:
+  | id                 { [$1] }
+  | id COMMA arg_list  { $1 :: $3 }
+;
+
+gdecl:
+  | LB ffnum COMMA ffnum RB id SEMICOLON           { Ast.VarDecl ($6, $2, $4) }
+  | AT id COLON exp                                { Ast.RankFun ($2, $4) }
+  | id LP STATE COLON arg_list SEMICOLON CONTROL COLON arg_list RP LC stmt_list RC
+    {
+      let states = List.map (fun x -> Ast.State x) $5 in
+      let ctrls = List.map (fun x -> Ast.Control x) $9 in
+      Ast.FunDef ($1, states @ ctrls, $12)
+    }
+;
+
+gdecl_list:
+  | /**/                      { [] }
+  | gdecl gdecl_list          { $1 :: $2 }
 ;
