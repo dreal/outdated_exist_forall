@@ -10,6 +10,10 @@ let run () =
     in
     let lexbuf = Lexing.from_channel (if !src = "" then stdin else open_in !src) in
     let program = Parser.gdecl_list Lexer.token lexbuf in
-    Ast.Print.program IO.stdout program
+    let smt2 = Trans.codegen program in
+    Ast.Print.program IO.stdout program;
+    print_newline ();
+    Basic.print_formula IO.stdout smt2;
+    print_newline ()
 
 let _ = Printexc.catch run ()
