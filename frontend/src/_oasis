@@ -1,0 +1,30 @@
+OASISFormat: 0.3
+Name:        dReal
+Version:     `
+Synopsis:    dReal tool set
+Authors:
+License:     GPL-3
+Plugins:     META (0.4)
+
+Library basic
+  Path:       ./basic
+  BuildTools: ocamlbuild
+  BuildDepends: batteries
+  NativeOpt:    -passopt -annot
+  Modules:    Type, Checker, Error, Basic, Ode, Value, Vardecl, Vardeclmap, Jump, Jumpmap, Mode, Modemap, Hybrid, Id
+
+Library smt2
+  Path:       ./smt2
+  BuildTools: ocamlbuild
+  BuildDepends: basic
+  NativeOpt:    -passopt -annot
+  Modules:    Smt2, Smt2_cmd
+
+
+Executable ef_main
+  Path:       ./exist_forall/
+  BuildTools: ocamlbuild
+  BuildDepends: batteries, basic, smt2
+  MainIs:     ef_main.ml
+  NativeOpt:    -passopt -annot
+  CompiledObject : native

@@ -1,0 +1,12 @@
+# OASIS_START
+# DO NOT EDIT (digest: 1b4c4b0de37e6dbe60834f889bbb91ba)
+version = "`"
+description = "dReal tool set"
+requires = "basic"
+archive(byte) = "smt2.cma"
+archive(byte, plugin) = "smt2.cma"
+archive(native) = "smt2.cmxa"
+archive(native, plugin) = "smt2.cmxs"
+exists_if = "smt2.cma"
+# OASIS_STOP
+
