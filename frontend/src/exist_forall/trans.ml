@@ -86,11 +86,24 @@ let rec wrap_in_universal
     (env : (string, float * float) Map.t)
     (f : Ast.formula) : Ast.formula
   =
-  match vars with
-  | [] -> f
-  | v :: tl ->
-    let lb, ub = Map.find v env in
-    Basic.ForallT (Basic.Var v, Basic.Num lb, Basic.Num ub, (wrap_in_universal tl env f))
+  let bound_vars =
+    List.map (fun v ->
+        let lb, ub = Map.find v env in
+        Basic.Var v, Basic.Num lb, Basic.Num ub) vars
+  in
+  Basic.Forall (bound_vars, f)
+
+let rec wrap_in_exist
+    (vars : string list)
+    (env : (string, float * float) Map.t)
+    (f : Ast.formula) : Ast.formula
+  =
+  let bound_vars =
+    List.map (fun v ->
+        let lb, ub = Map.find v env in
+        Basic.Var v, Basic.Num lb, Basic.Num ub) vars
+  in
+  Basic.Exist (bound_vars, f)
 
 let codegen (program : Ast.program) : Ast.formula =
   let var_defs, rest =
@@ -130,13 +143,9 @@ let codegen (program : Ast.program) : Ast.formula =
     | _ -> failwith "should be a function definition"
   in
 
-  let template_vars =
-    (Map.bindings state_defs) @ (Map.bindings control_defs @ [("", v)])
-    |> List.map (fun (_, e) -> e)
-    |> Basic.collect_vars_in_exps
-    |> (fun all_vars ->
-        Set.diff all_vars (Set.union state_vars control_vars))
-  in
+  let all_vars = Map.keys var_defs |> Set.of_enum in
+  let universal_vars = control_vars in
+  let exist_vars = Set.diff all_vars universal_vars in
 
   (* control constraint *)
   let control_formula =
@@ -160,7 +169,6 @@ let codegen (program : Ast.program) : Ast.formula =
     |> fun es -> (if List.length es = 1 then List.hd es else Basic.Add es)
     |> fun e -> Basic.Lt (e, Basic.Num 0.0)
   in
-
-  let main_formula = Basic.make_and [control_formula; rank_formula; deriv_formula] in
-  let formula = wrap_in_universal (Set.elements state_vars) var_defs main_formula in
-  formula
+  Basic.make_and [control_formula; rank_formula; deriv_formula]
+  |> wrap_in_universal (Set.elements universal_vars) var_defs
+  |> wrap_in_exist (Set.elements exist_vars) var_defs

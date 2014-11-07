@@ -57,6 +57,10 @@ type exp =
    | LetF of ((string * formula) list * formula)
    | LetE of ((string * exp) list * formula)
    | ForallT of exp * exp * exp * formula
+   | Forall of bound_var list * formula
+   | Exist of bound_var list * formula
+
+and bound_var = exp * exp * exp
 
 let rec collect_vars_in_formula (f : formula) : var Set.t =
   match f with
@@ -713,6 +717,24 @@ and print_formula out =
        print_formula out f;
        String.print out ")";
      end
+  | Forall (bounds, f) ->
+    begin
+      String.print out "(forall ";
+      List.print ~first:"[" ~last:"]" ~sep:";" print_bound out bounds;
+      print_formula out f;
+      String.print out ")";
+    end
+  | Exist (bounds, f) ->
+    begin
+      String.print out "(exist ";
+      List.print ~first:"[" ~last:"]" ~sep:";" print_bound out bounds;
+      print_formula out f;
+      String.print out ")";
+    end
+
+and print_bound out (v, lb, ub) =
+  List.print ~first:"(" ~last:")" ~sep:"," print_exp out [v; lb; ub]
+
 let rec print_infix_exps (out : 'a IO.output) (op : string) (exps : exp list) =
   begin
     List.print
