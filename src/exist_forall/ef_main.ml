@@ -18,8 +18,7 @@ let run () =
     if !debug_parse
     then begin Ast.Print.program IO.stdout program; print_newline () end
     else ();
-
-    Basic.print_formula IO.stdout smt2;
+    Loop.main smt2 5;
     print_newline ()
 
 let _ = Printexc.catch run ()
