@@ -57,7 +57,7 @@ let make_smt2 (exist_bv_list : (string * float * float) list) (f : Basic.formula
                [Assert f];
                [CheckSAT;Exit];]
 
-let main (f : Basic.formula) (n : int) =
+let main (f : Basic.formula) (n : int) (debug_mode : bool) =
   let out = IO.stdout in
   Random.self_init ();
   let (exist_bv_list, forall_bv_list, f') = extract_exist_forall f in
@@ -66,28 +66,38 @@ let main (f : Basic.formula) (n : int) =
   let conj_of_instantiated_formulas = Basic.make_and instantiated_formulas in
   let new_smt2 = make_smt2 exist_bv_list conj_of_instantiated_formulas in
   let dReal_result = Dreal.call new_smt2 in
-  (* ----------- Print Formula ------------- *)
-  String.print out "Existential Quantifiers = ";
-  List.print ~first:"[" ~last:"]" ~sep:", "
-    (fun out (n, l, u) ->
-       List.print ~first:"(" ~last:")" ~sep:", " String.print out [n; String.of_float l; String.of_float u])
-    out
-    exist_bv_list;
-  String.print out "\nForall Quantifiers = ";
-  List.print ~first:"[" ~last:"]" ~sep:", "
-    (fun out (n, l, u) ->
-       List.print ~first:"(" ~last:")" ~sep:", " String.print out [n; String.of_float l; String.of_float u])
-    out
-    forall_bv_list;
-  String.print out "\nOriginal Formula = ";
-  Basic.print_formula out f';
-  String.print out "\n";
-  (* -------------------------------------- *)
-  String.print out "Samples:\n";
-  print_points out samples;
-  String.print out "\nSubstituted Formula = ";
-  Basic.print_formula out conj_of_instantiated_formulas;
-  String.print out "SMT2\n";
-  Smt2.print out new_smt2;
-  String.print out "\nRunning dReal = ";
+  if debug_mode then begin
+    String.println out "";
+    String.println out "Existential Quantifiers";
+    String.println out "=======================";
+    List.print ~first:"[" ~last:"]\n" ~sep:", "
+      print_interval out exist_bv_list;
+    String.println out "";
+    String.println out "Universal Quantifiers";
+    String.println out "=====================";
+    List.print ~first:"[" ~last:"]\n" ~sep:", "
+      print_interval out forall_bv_list;
+    String.println out "";
+    String.println out "Formula";
+    String.println out "=======";
+    Basic.print_formula out f';
+    String.println out "";
+    String.println out "";
+    String.println out "Sample Points";
+    String.println out "=============";
+    print_points out samples;
+    String.println out "";
+    String.println out "";
+    String.println out "Substituted Formula";
+    String.println out "===================";
+    Basic.print_formula out conj_of_instantiated_formulas;
+    String.println out "";
+    String.println out "";
+    String.println out "SMT2 Formula";
+    String.println out "=============";
+    Smt2.print out new_smt2;
+    String.println out "";
+    String.println out "Running dReal";
+    String.println out "=============";
+  end;
   Dreal.print_result out dReal_result
