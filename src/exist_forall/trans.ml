@@ -155,7 +155,7 @@ let codegen (program : Ast.program) : Ast.formula =
   in
 
   let all_vars = Map.keys var_defs |> Set.of_enum in
-  let universal_vars = control_vars in
+  let universal_vars = state_vars in
   let exist_vars = Set.diff all_vars universal_vars in
 
   (* control constraint *)
