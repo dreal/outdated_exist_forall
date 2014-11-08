@@ -859,3 +859,40 @@ and print_infix_formula (out : 'a IO.output) : formula -> unit =
   | LetE _ -> failwith "print_infix_formula: not support LetE yet"
   | LetF _ -> failwith "print_infix_formula: not support LetE yet"
   | ForallT (m, lb, ub, f)-> failwith "print_infix_formula: not support ForallT yet"
+
+type name = string
+type point = (name * float) list
+type points = point list
+type interval = name * float * float
+type interval_box = interval list
+
+let print_point out p =
+  List.print ~first:"(" ~last:")" ~sep:", "
+    (fun out (name, value) ->
+       String.print out name;
+       String.print out " ↦ " ;
+       Float.print out value;)
+    out
+    p
+
+let print_points out ps =
+  List.print ~first:"[" ~last:"]" ~sep:";\n"
+    print_point
+    out
+    ps
+
+let print_interval out (n, l, u) =
+  begin
+    String.print out n;
+    String.print out " ↦ [" ;
+    Float.print out l;
+    String.print out ", ";
+    Float.print out u;
+    String.print out "]";
+  end
+
+let print_interval_box out b =
+  List.print ~first:"[" ~last:"]\n" ~sep:"; "
+    print_interval
+    out
+    b
