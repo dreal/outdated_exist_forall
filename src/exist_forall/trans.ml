@@ -45,6 +45,7 @@ let rec subst (e : Ast.exp) (c_env : (string, Ast.exp)  Map.t) : Ast.exp =
 
 (* add [e] is equal to e *)
 let rec simplify (e : Ast.exp) : Ast.exp =
+  let open Basic in
   match e with
   | Var _ -> e
   | Vec _ -> failwith "not supported"
@@ -110,14 +111,22 @@ let codegen (program : Ast.program) : Ast.formula =
     List.partition
       (function | Ast.VarDecl _ -> true | _ -> false) program in
   let var_defs = List.fold_left
-      (fun map (Ast.VarDecl (v, lb, up)) ->
-         Map.add v (lb, up) map) Map.empty var_defs in
+      (fun map stmt ->
+         match stmt with
+         | Ast.VarDecl (v, lb, up) -> Map.add v (lb, up) map
+         | _ -> failwith "shoule be var decl"
+      )
+      Map.empty var_defs in
   let rank_fun, body =
     List.partition
       (function | Ast.RankFun _ -> true | _ -> false) rest in
 
   (* assume we only have 1 rank function and 1 body function *)
-  let v = List.hd rank_fun |> function | Ast.RankFun (_, e) -> e in
+  let v =
+    List.hd rank_fun
+    |> (function | Ast.RankFun (_, e) -> e
+                 | _ -> failwith "more than 1 rank fun")
+  in
   let body = List.hd body in
 
   let state_vars, control_vars =
@@ -125,8 +134,10 @@ let codegen (program : Ast.program) : Ast.formula =
     | Ast.FunDef (_, args, _) -> begin
         let ss, cs =
           List.partition (function | Ast.State _ -> true | _ -> false) args in
-        List.map (function | Ast.State s -> s) ss |> set_of_list,
-        List.map (function | Ast.Control s -> s) cs |> set_of_list
+        List.map
+          (function | Ast.State s -> s | _ -> failwith "not a state") ss |> set_of_list,
+        List.map
+          (function | Ast.Control s -> s | _ -> failwith "not a control") cs |> set_of_list
       end
     | _ -> failwith "should be a function definition"
   in
