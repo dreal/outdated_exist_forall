@@ -3,15 +3,14 @@ open Batteries
 let dReal_path = "dReal"
 
 type result = UNSAT
-            | SAT of Basic.interval list
+            | SAT of Basic.interval_box
 
 let print_result out =
   function
   | UNSAT -> String.print out "UNSAT"
   | SAT bv_list ->
     String.println out "SAT";
-    List.print ~first:"" ~last:"" ~sep:"\n"
-      Basic.print_interval out bv_list
+    Basic.print_interval_box out bv_list
 
 (* Run a command and return its results as a list of strings,
    one per line. *)
@@ -27,7 +26,6 @@ let read_process_lines command =
       ignore (Unix.close_process_in in_channel)
   end;
   List.rev !lines
-
 
 let parse_model_line (line : string) : Basic.interval =
   let (name, rest) = String.split line ~by:" : " in
