@@ -165,7 +165,7 @@ let codegen (program : Ast.program) : Ast.formula =
     |> Basic.make_and in
 
   (* V >= 0 *)
-  let rank_formula = Basic.Gt (v, Basic.Num 0.0) in
+  let rank_formula = Basic.Ge (v, Basic.Num 0.0) in
 
   (* derivative formula *)
   let deriv_formula =
@@ -178,7 +178,7 @@ let codegen (program : Ast.program) : Ast.formula =
          Basic.Mul [v_x; e2]
       )
     |> fun es -> (if List.length es = 1 then List.hd es else Basic.Add es)
-    |> fun e -> Basic.Lt (e, Basic.Num 0.0)
+    |> fun e -> Basic.Le (e, Basic.Num 0.0)
   in
   Basic.make_and [control_formula; rank_formula; deriv_formula]
   |> wrap_in_universal (Set.elements universal_vars) var_defs
