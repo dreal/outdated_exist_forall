@@ -1,5 +1,7 @@
 open Batteries
 
+let dReal_path = "dReal"
+
 type result = UNSAT
             | SAT of Basic.interval list
 
@@ -43,7 +45,6 @@ let parse_model (smt2_filename : string) : Basic.interval list =
 
 (* Call dReal and return result *)
 let call (smt2 : Smt2.t) : result =
-  let dReal_path = "~/work/dReal/bin/dReal" in
   let temp_smt2_filename = "temp.smt2" in
   let _ =
     File.with_file_out ~mode:[`create] temp_smt2_filename
