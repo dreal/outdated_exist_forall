@@ -896,3 +896,11 @@ let print_interval_box out b =
     print_interval
     out
     b
+
+let interval_box_close (b1 : interval_box) (b2 : interval_box) : bool =
+  let delta = 0.000001 in
+  List.for_all2 (fun (n1, l1, u1) (n2, l2, u2) ->
+      let m1 = ((l1 +. u1) /. 2.0) in
+      let m2 = ((l2 +. u2) /. 2.0) in
+      Float.abs (m1 -. m2) < delta)
+    b1 b2
