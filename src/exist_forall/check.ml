@@ -6,8 +6,11 @@ let var_decl (program : Ast.program) =
       (function | Ast.VarDecl _ -> true | _ -> false) program
   in
   let var_defs = List.fold_left
-      (fun map (Ast.VarDecl (v, lb, up)) ->
-         Map.add v (lb, up) map) Map.empty var_defs in
+      (fun map stmt -> match stmt with
+         | Ast.VarDecl (v, lb, up) ->
+           Map.add v (lb, up) map
+         | _ -> failwith "should be a vardecl") Map.empty var_defs
+  in
   let rank_fun, body =
     List.partition
       (function | Ast.RankFun _ -> true | _ -> false) rest in

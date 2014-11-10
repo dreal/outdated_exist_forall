@@ -79,6 +79,8 @@ let rec collect_vars_in_formula (f : formula) : var Set.t =
                             collect_vars_in_formula f']
   | LetF _ -> raise TODO
   | LetE _ -> raise TODO
+  | Forall _ -> raise TODO
+  | Exist _ -> raise TODO
 and collect_vars_in_exps (es : exp list) =
   List.reduce Set.union (List.map collect_vars_in_exp es)
 and collect_vars_in_formulas (fs : formula list) =
@@ -206,6 +208,8 @@ and map_formula (fn_f : formula -> formula) (fn_e: exp -> exp) : (formula -> for
             in
             let f' = map_formula fn_f fn_e' f in
             fn_f (LetF (var_f_list', f'))
+         | Forall _
+         | Exist _ -> raise TODO
 
 let preprocess_exp (f: string -> exp) : (exp -> exp) =
   let aux : (exp -> exp) = function Var s -> f s
@@ -431,6 +435,8 @@ and count_mathfn_f =
   | ForallT (m, lb, ub, f) ->
      (count_mathfn_e m) + (count_mathfn_e lb)
      + (count_mathfn_e ub) + (count_mathfn_f f)
+  | Forall _
+  | Exist _ -> raise TODO
 
 let rec count_arith_e =
   function
@@ -469,6 +475,8 @@ and count_arith_f =
   | ForallT (m, lb, ub, f) ->
      (count_arith_e m) + (count_arith_e lb)
      + (count_arith_e ub) + (count_arith_f f)
+  | Forall _
+  | Exist _ -> raise TODO
 
 let rec collect_var_in_f f : string Set.t =
   match f with
@@ -505,6 +513,8 @@ let rec collect_var_in_f f : string Set.t =
                               collect_var_in_e lb;
                               collect_var_in_e ub;
                               collect_var_in_f f]
+  | Forall _
+  | Exist _ -> raise TODO
 
 and collect_var_in_e e : string Set.t =
   match e with
@@ -859,6 +869,8 @@ and print_infix_formula (out : 'a IO.output) : formula -> unit =
   | LetE _ -> failwith "print_infix_formula: not support LetE yet"
   | LetF _ -> failwith "print_infix_formula: not support LetE yet"
   | ForallT (m, lb, ub, f)-> failwith "print_infix_formula: not support ForallT yet"
+  | Forall _ -> raise TODO
+  | Exist _ -> raise TODO
 
 type name = string
 type point = (name * float) list
