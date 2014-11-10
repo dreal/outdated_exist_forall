@@ -43,22 +43,56 @@ let rec subst (e : Ast.exp) (c_env : (string, Ast.exp)  Map.t) : Ast.exp =
   | Atanh e -> Atanh (subst e c_env)
   | Integral _ -> failwith "not supported"
 
-(* add [e] is equal to e *)
 let rec simplify (e : Ast.exp) : Ast.exp =
   let open Basic in
   match e with
-  | Var _ -> e
-  | Vec _ -> failwith "not supported"
+  | Var _
+  | Vec _
   | Num _ -> e
+
+  (* negation *)
+  | Neg (Neg e) -> simplify e
   | Neg e -> Neg (simplify e)
-  | Add es when List.length es = 1 -> List.hd es |> simplify
-  | Add es -> Add (List.map simplify es)
-  | Sub es when List.length es = 1 -> List.hd es |> simplify
+
+  (* addition *)
+  | Add [e] -> simplify e
+  | Add [Num n; e]
+  | Add [e; Num n] when compare n 0.0 = 0
+    -> simplify e
+  | Add es ->
+    let e' = Add (List.map simplify es) in
+    if e' = e then e' else simplify e'
+
+  (* subtraction *)
+  | Sub [e; Num n] when compare n 0.0 = 0
+    -> simplify e
+  | Sub [Num n; e] when compare n 0.0 = 0
+    -> Neg e |> simplify
   | Sub es -> Sub (List.map simplify es)
-  | Mul es when List.length es = 1 -> List.hd es |> simplify
-  | Mul es -> Mul (List.map simplify es)
+
+  (* multiplication *)
+  | Mul [e] -> simplify e
+  | Mul [e; Num n]
+  | Mul [Num n; e] when compare n 0.0 = 0
+    -> Num 0.0
+
+  | Mul [e; Num n]
+  | Mul [Num n; e] when compare n 1.0 = 0
+    -> simplify e
+
+  | Mul es ->
+    let e' = Mul (List.map simplify es) in
+    if e' = e then e else simplify e'
+
+  (* division *)
+  | Div (e, Num n) when compare n 1.0 = 0 -> simplify e
   | Div (e1, e2) -> Div (simplify e1, simplify e2)
+
+  (* power  *)
+  | Pow (e, Num n) when compare n 0.0 = 0 -> Num 1.0
+  | Pow (e, Num n) when compare n 1.0 = 0 -> simplify e
   | Pow (e1, e2) -> Pow (simplify e1, simplify e2)
+
   | Ite _ -> failwith "not supported"
   | Sqrt e -> Sqrt (simplify e)
   | Safesqrt _ -> failwith "not supported"
@@ -81,6 +115,34 @@ let rec simplify (e : Ast.exp) : Ast.exp =
   | Acosh e -> Acosh (simplify e)
   | Atanh e -> Atanh (simplify e)
   | Integral _ -> failwith "not supported"
+
+and simplify_formula (f : Basic.formula) : Basic.formula =
+  let open Basic in
+  match f with
+  | True
+  | False
+  | FVar _ -> f
+  | Not (Not f) -> simplify_formula f
+  | Not f -> Not (simplify_formula f)
+  | And fs -> And (List.map simplify_formula fs)
+  | Or fs -> Or (List.map simplify_formula fs)
+  | Imply (f1, f2) -> Imply (simplify_formula f1, simplify_formula f2)
+  | Gt (e1, e2) -> Gt (simplify e1, simplify e2)
+  | Lt (e1, e2) -> Lt (simplify e1, simplify e2)
+  | Ge (e1, e2) -> Ge (simplify e1, simplify e2)
+  | Le (e1, e2) -> Le (simplify e1, simplify e2)
+  | Eq (e1, e2) -> Eq (simplify e1, simplify e2)
+  | Gtp (e1, e2, f) -> Gtp (simplify e1, simplify e2, f)
+  | Ltp (e1, e2, f) -> Ltp (simplify e1, simplify e2, f)
+  | Gep (e1, e2, f) -> Gep (simplify e1, simplify e2, f)
+  | Lep (e1, e2, f) -> Lep (simplify e1, simplify e2, f)
+  | Eqp (e1, e2, f) -> Eqp (simplify e1, simplify e2, f)
+  | LetF _
+  | LetE _
+  | ForallT _ -> failwith "not supported"
+  | Forall (bounds, f) -> Forall (bounds, simplify_formula f)
+  | Exist (bounds, f) -> Exist (bounds, simplify_formula f)
+
 
 let rec wrap_in_universal
     (vars : string list)
@@ -174,12 +236,13 @@ let codegen (program : Ast.program) : Ast.formula =
       (fun (x, e) ->
          let e1 = subst e control_defs in
          let e2 = Basic.Sub [e1; Basic.Var x] in
-         let v_x = Basic.deriv v x |> simplify in
+         let v_x = Basic.deriv v x in
          Basic.Mul [v_x; e2]
       )
-    |> fun es -> (if List.length es = 1 then List.hd es else Basic.Add es)
+    |> fun es -> Basic.Add es
     |> fun e -> Basic.Le (e, Basic.Num 0.0)
   in
   Basic.make_and [control_formula; rank_formula; deriv_formula]
   |> wrap_in_universal (Set.elements universal_vars) var_defs
   |> wrap_in_exist (Set.elements exist_vars) var_defs
+  |> simplify_formula
